@@ -1,0 +1,13 @@
+{ // Configure glob patterns for excluding files and folders.
+  "files.exclude": {
+    "node_modules": true,
+    ".serverless": true,
+    ".nyc_output": true,
+    "coverage": true
+  },
+  // https://github.com/vscode-icons/vscode-icons/wiki/ListOfFolders
+  "vsicons.associations.folders": [
+    { "icon": "app", "extensions": ["controllers"], "format": "svg" },
+    { "icon": "asset", "extensions": ["services"], "format": "svg" }
+  ]
+ }

@@ -1,0 +1,240 @@
+service: b4f-contents
+
+plugins:
+  - serverless-offline
+  - serverless-plugin-tracing
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: us-east-1
+  stage: v1
+  tracing: true
+  deploymentBucket: ${env:DEPLOYMENT_BUCKET}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+        - cloudwatch:*
+        - logs:*
+        - xray:*
+      Resource: "*"
+  environment:
+    ENABLE_LOG_ERROR: true
+    ENABLE_LOG_INFO: false
+    ENABLE_LOG_WARN: true
+    ENABLE_XRAY: ${env:ENABLE_XRAY}
+
+functions:
+  getContentMovie:
+    name: ${self:service}_getContentMovie_${self:provider.stage}
+    handler: src/handler.getContentMovie
+    description: Function to get content movie details
+    timeout: 30
+    memorySize: 256
+    events:
+      - http:
+          path: contents/movie/{contentId}
+          method: GET
+          cors: true
+          private: true
+    environment:
+      THEMOVIEDB_MOVIE: https://api.themoviedb.org/3/movie/{contentId}?api_key=8f44d5dacd63686eab005505b1ec91d7&language=pt-BR
+
+  getContentTvShow:
+    name: ${self:service}_getContentTvShow_${self:provider.stage}
+    handler: src/handler.getContentTvShow
+    description: Function to get content tvshow details
+    timeout: 30
+    memorySize: 256
+    events:
+      - http:
+          path: contents/tvshow/{contentId}
+          method: GET
+          cors: true
+          private: true
+    environment:
+      THEMOVIEDB_TVSHOW: https://api.themoviedb.org/3/tv/{contentId}?api_key=8f44d5dacd63686eab005505b1ec91d7&language=pt-BR
+
+custom:
+  stage: "${opt:stage, self:provider.stage}"
+  serverless-offline:
+    apiKey: ${env:X_API_KEY}
+
+resources:
+  Resources:
+### Gateway
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${self:service}-${self:custom.stage}
+
+### Gateway Response
+    GatewayResponseDefault400:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: DEFAULT_4XX
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_4XX-generic\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseDefault500:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: DEFAULT_5XX
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_5XX-generic\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseAccessDeied:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: ACCESS_DENIED
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_403-access-denied\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseApiConfigurationError:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: API_CONFIGURATION_ERROR
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_500-api-configuration-error\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseAuthorizerConfigurationError:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: AUTHORIZER_CONFIGURATION_ERROR
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_500-authorizer-configuration-error\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseAuthorizerFailure:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: AUTHORIZER_FAILURE
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_500-authorizer-failure\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseBadRequestBody:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: BAD_REQUEST_BODY
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_400-bad-request-body\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseBadRequestParameters:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: BAD_REQUEST_PARAMETERS
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_400-bad-request-parameters\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseExpiredToken:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: EXPIRED_TOKEN
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_403-expired-token\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseIntegrationFailure:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: INTEGRATION_FAILURE
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_504-integration-failure\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseIntegrationTimeout:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: INTEGRATION_TIMEOUT
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_504-integration-timeout\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseInvalidApiKey:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: INVALID_API_KEY
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_403-invalid-api-key\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseInvalidSignature:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: INVALID_SIGNATURE
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_403-invalid-signature\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseMissingAuthenticationToken:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: MISSING_AUTHENTICATION_TOKEN
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_403-missing-authentication-token\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseQuotaExceeded:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: QUOTA_EXCEEDED
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_429-quota-exceeded\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseRequestTooLarge:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: REQUEST_TOO_LARGE
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_413-request-too-large\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseResourceNotFound:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: RESOURCE_NOT_FOUND
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_404-resource-not-found\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseThrottled:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: THROTTLED
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_429-throttled\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseUnauthorized:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: UNAUTHORIZED
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_401-unauthorized\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+    GatewayResponseUnauthorizedMediType:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+        ResponseType: UNSUPPORTED_MEDIA_TYPE
+        ResponseTemplates:
+          application/json: "{\"error\":{\"code\":\"B4F_415-unsupported-media-type\",\"message\":$context.error.messageString},\"requestId\":\"$context.requestId\"}"
+
+package:
+ excludeDevDependencies: true
+ exclude:
+   - .vscode/**
+   - scripts/**
+   - coverage/**
+   - .git/**
