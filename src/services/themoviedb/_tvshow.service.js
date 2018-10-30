@@ -15,15 +15,11 @@ const getTvShow = (contentId) => {
   return helpers.request.send(options, 'tvshow_themoviedb')
     .then(data => {
       // TODO: Validate Errors
-      return data.body;
-    })
-    .catch(err => {
-      if (!safe) {
-        throw err;
+      if (data.body.status_code === 34) {
+        return Promise.reject({ httpStatusCode: 404, message: `Content tv show, ${contentId}, not found`});
       }
 
-      // TODO: LOG
-      return [];
+      return data.body;
     });
 };
 

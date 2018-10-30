@@ -1,8 +1,8 @@
 {
   "name": "b4f-aws-serverless-api-contents",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API to contents details",
+  "main": "src/handler.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +20,6 @@
     "b4f-common": "file:../b4f-aws-serverless-code-common"
   },
   "devDependencies": {
-    "aws-sdk": "^2.340.0",
     "eslint": "^5.7.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0",

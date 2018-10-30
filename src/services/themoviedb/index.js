@@ -1,7 +1,7 @@
 'use strict';
 
-const movie = require('./movie.themoviedb.service');
-const tvshow = require('./tvshow.themoviedb.service');
+const movie = require('./_movie.service');
+const tvshow = require('./_tvshow.service');
 
 module.exports = {
   movie,
